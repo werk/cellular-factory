@@ -6,9 +6,12 @@ import factory.SandAndWater
 
 case class MainComponent() extends Component[NoEmit] {
 
-    override def render(get : Get) : Element = {
+    override def render(get : Get) : Node = {
         val glsl = compile(SandAndWater.declarations)
-        E.pre(Text(glsl))
+        E.div(
+            Component(CanvasComponent),
+            E.pre(Text(glsl)),
+        )
     }
 
 }
