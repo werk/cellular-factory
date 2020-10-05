@@ -151,10 +151,6 @@ object FactoryGl {
         )
     }
 
-    private sealed trait RenderTarget
-    private case class CanvasRenderTarget(canvas : HTMLCanvasElement) extends RenderTarget
-    private case class FrameBufferRenderTarget(frameBuffer : HTMLCanvasElement) extends RenderTarget
-
     sealed trait UniformReference
 
     class UniformInt extends UniformReference {
