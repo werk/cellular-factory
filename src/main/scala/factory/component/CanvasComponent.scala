@@ -3,8 +3,9 @@ package factory.component
 import com.github.ahnfelt.react4s._
 import org.scalajs.dom
 import dom.raw.{WebGLRenderingContext => GL}
-import factory.webgl.WebGlRunner
-import factory.webgl.WebGlRunner.UniformFloat
+import factory.IVec2
+import factory.webgl.FactoryGl
+import factory.webgl.FactoryGl.UniformFloat
 
 case class CanvasComponent() extends Component[NoEmit] {
 
@@ -17,17 +18,24 @@ case class CanvasComponent() extends Component[NoEmit] {
         val canvas = e.asInstanceOf[dom.html.Canvas]
         val gl = canvas.getContext("webgl").asInstanceOf[GL]
         val timeUniform = new UniformFloat()
-        val renderer = new WebGlRunner(gl, fragmentCode, List("t" -> timeUniform))
+        val renderer = new FactoryGl(
+            gl = gl,
+            simulateFragmentCode = fragmentCode,
+            drawFragmentCode = fragmentCode,
+            uniforms = List("t" -> timeUniform),
+            materialsImage = null,
+            stateSize = IVec2(100, 100)
+        )
         start(renderer, timeUniform)
     }
 
-    def start(renderer : WebGlRunner, timeUniform : UniformFloat) {
+    def start(renderer : FactoryGl, timeUniform : UniformFloat) {
         val t0 = System.currentTimeMillis()
 
         def loop(x : Double) {
             val t = (System.currentTimeMillis() - t0) / 1000f
             timeUniform.value = t
-            renderer.render()
+            renderer.draw()
             dom.window.requestAnimationFrame(loop)
         }
         dom.window.requestAnimationFrame(loop);

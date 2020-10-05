@@ -1,5 +1,6 @@
 package factory.webgl
 
+import factory.IVec2
 import org.scalajs.dom
 import org.scalajs.dom.raw.WebGLRenderingContext._
 import org.scalajs.dom.raw._
@@ -56,15 +57,20 @@ object WebGlFunctions {
         gl.uniform1i(uniformLocation, 0)
     }
 
-    def bindTexture(gl : WebGLRenderingContext, loadedImage : HTMLImageElement) : WebGLTexture = {
+    def bindDataTexture(gl : WebGLRenderingContext, source : TextureSource) : WebGLTexture = {
         val texture = gl.createTexture()
         gl.bindTexture(TEXTURE_2D, texture)
-        gl.texImage2D(TEXTURE_2D, 0, RGBA, RGBA, UNSIGNED_BYTE, loadedImage)
-        //gl.texParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, LINEAR)
-        //gl.texParameteri(TEXTURE_2D, TEXTURE_MIN_FILTER, LINEAR_MIPMAP_NEAREST)
-        gl.texParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, NEAREST)
-        gl.texParameteri(TEXTURE_2D, TEXTURE_MIN_FILTER, NEAREST)
-        gl.generateMipmap(TEXTURE_2D)
+        source match {
+            case ImageTextureSource(loadedImage) =>
+                gl.texImage2D(TEXTURE_2D, 0, RGBA, RGBA, UNSIGNED_BYTE, loadedImage)
+            case DataTextureSource(size) =>
+                gl.texImage2D(TEXTURE_2D, 0, RGBA, size.x, size.y, 0, RGBA, UNSIGNED_BYTE, null);
+        }
+
+        gl.texParameteri(TEXTURE_2D, TEXTURE_WRAP_S, CLAMP_TO_EDGE);
+        gl.texParameteri(TEXTURE_2D, TEXTURE_WRAP_T, CLAMP_TO_EDGE);
+        gl.texParameteri(TEXTURE_2D, TEXTURE_MIN_FILTER, NEAREST);
+        gl.texParameteri(TEXTURE_2D, TEXTURE_MAG_FILTER, NEAREST);
         gl.bindTexture(TEXTURE_2D, null)
         texture
     }
@@ -85,17 +91,21 @@ object WebGlFunctions {
         gl.viewport(0, 0, gl.canvas.width, gl.canvas.height)
     }
 
-    def resize(gl : WebGLRenderingContext) {
+    def resize(canvas : HTMLCanvasElement) {
         // Lookup the size the browser is displaying the canvas in CSS pixels
         // and compute a size needed to make our drawingbuffer match it in
         // device pixels.
         val realToCSSPixels = dom.window.devicePixelRatio
-        val displayWidth = Math.floor(gl.canvas.clientWidth * realToCSSPixels).toInt
-        val displayHeight = Math.floor(gl.canvas.clientHeight * realToCSSPixels).toInt
+        val displayWidth = Math.floor(canvas.clientWidth * realToCSSPixels).toInt
+        val displayHeight = Math.floor(canvas.clientHeight * realToCSSPixels).toInt
 
-        if (gl.canvas.width != displayWidth || gl.canvas.height != displayHeight) {
-            gl.canvas.width = displayWidth
-            gl.canvas.height = displayHeight
+        if (canvas.width != displayWidth || canvas.height != displayHeight) {
+            canvas.width = displayWidth
+            canvas.height = displayHeight
         }
     }
+
+    sealed trait TextureSource
+    case class ImageTextureSource(loadedImage : HTMLImageElement) extends TextureSource
+    case class DataTextureSource(size : IVec2) extends TextureSource
 }
