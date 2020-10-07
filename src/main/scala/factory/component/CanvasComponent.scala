@@ -10,7 +10,10 @@ import factory.webgl.FactoryGl.UniformFloat
 case class CanvasComponent() extends Component[NoEmit] {
 
     override def render(get : Get) : Node = {
-        val canvas = E.canvas().withRef(withCanvas)
+        val canvas = E.canvas(
+            S.width.px(500),
+            S.height.px(500),
+        ).withRef(withCanvas)
         canvas
     }
 
@@ -20,8 +23,8 @@ case class CanvasComponent() extends Component[NoEmit] {
         val timeUniform = new UniformFloat()
         val renderer = new FactoryGl(
             gl = gl,
-            simulateFragmentCode = fragmentCode,
-            drawFragmentCode = fragmentCode,
+            simulateCode = simulationCode,
+            viewCode = viewCode,
             uniforms = List("t" -> timeUniform),
             materialsImage = null,
             stateSize = IVec2(100, 100)
@@ -31,9 +34,16 @@ case class CanvasComponent() extends Component[NoEmit] {
 
     def start(renderer : FactoryGl, timeUniform : UniformFloat) {
         val t0 = System.currentTimeMillis()
+        var step = 0
 
         def loop(x : Double) {
             val t = (System.currentTimeMillis() - t0) / 1000f
+            if(t.toInt > step) {
+                step = t.toInt
+                //println(s"Simulate $step")
+                renderer.simulate()
+            }
+
             timeUniform.value = t
             renderer.draw()
             dom.window.requestAnimationFrame(loop)
@@ -41,13 +51,36 @@ case class CanvasComponent() extends Component[NoEmit] {
         dom.window.requestAnimationFrame(loop);
     }
 
-    val fragmentCode = """
-  precision mediump float;
+    val viewCode = """
+precision mediump float;
+uniform sampler2D state;
 
-  uniform float t;
+uniform float t;
 
-  void main() {
-    gl_FragColor = vec4(0.5, sin(t) * 0.5 + 0.5, 1, 1);
-  }
+void main() {
+    vec2 offset = vec2(0, 0);
+    vec2 resolution = vec2(500, 500);
+    float zoom = 1.0;
+    float screenToMapRatio = zoom / resolution.x;
+    vec2 xy = gl_FragCoord.xy * screenToMapRatio + offset;
+    vec2 tile = floor(xy + 0.5);
+
+    vec2 stateSize = vec2(100, 100);
+
+    vec4 center = texture2D(state, tile / stateSize);
+
+    gl_FragColor = vec4(center.x, sin(t) * 0.5 + 0.5, 1, 1);
+}
     """
+
+    val simulationCode = """
+precision mediump float;
+
+uniform float t;
+
+void main() {
+    gl_FragColor = vec4(sin(t * 13.37) * 0.5 + 0.5, 1, 1, 1);
+}
+    """
+
 }

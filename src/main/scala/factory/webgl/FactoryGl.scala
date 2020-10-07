@@ -11,23 +11,29 @@ import scala.scalajs.js
 
 class FactoryGl(
     gl : GL,
-    simulateFragmentCode : String,
-    drawFragmentCode : String,
+    simulateCode : String,
+    viewCode : String,
     uniforms : List[(String, UniformReference)],
     materialsImage : HTMLImageElement,
     stateSize : IVec2,
 ) {
 
     private object programs {
-        val simulate = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, simulateFragmentCode)
-        val draw = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, drawFragmentCode)
+        val simulate = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, simulateCode)
+        val view = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, viewCode)
     }
 
     private object textures {
-        val front = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
-        val back = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
+        var front = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
+        var back = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
         //val materials = WebGlFunctions.bindDataTexture(gl, ImageTextureSource(materialsImage))
         //val inventory = WebGlFunctions.bindDataTexture(gl, DataTextureSource(inventorySize))
+
+        def swap() = {
+            val temp = front
+            front = back
+            back = temp
+        }
     }
 
     private val positionBuffer : WebGLBuffer = {
@@ -50,19 +56,20 @@ class FactoryGl(
     def simulate() = {
         FactoryGl.renderSimulation(
             gl = gl,
-            program = programs.draw,
+            program = programs.simulate,
             positionBuffer = positionBuffer,
             uniforms = uniforms,
             framebuffer = framebuffer,
-            textureIn = textures.back,
-            textureOut = textures.front,
+            front = textures.front,
+            back = textures.back,
             stateSize = stateSize,
         )
+        textures.swap()
     }
 
     def draw() = FactoryGl.renderDraw(
         gl = gl,
-        program = programs.draw,
+        program = programs.view,
         positionBuffer = positionBuffer,
         uniforms = uniforms,
         canvas = gl.canvas,
@@ -78,8 +85,8 @@ object FactoryGl {
         positionBuffer : WebGLBuffer,
         uniforms : List[(String, UniformReference)],
         framebuffer : WebGLFramebuffer,
-        textureIn : WebGLTexture,
-        textureOut : WebGLTexture,
+        front : WebGLTexture,
+        back : WebGLTexture,
         stateSize : IVec2
     ): Unit = {
         gl.bindFramebuffer(GL.FRAMEBUFFER, framebuffer)
@@ -87,17 +94,14 @@ object FactoryGl {
             target = GL.FRAMEBUFFER,
             attachment = GL.COLOR_ATTACHMENT0,
             textarget = GL.TEXTURE_2D,
-            texture = textureOut,
+            texture = back,
             level = 0
         )
         gl.activeTexture(GL.TEXTURE0 + 0)
-        gl.bindTexture(GL.TEXTURE_2D, textureIn)
+        gl.bindTexture(GL.TEXTURE_2D, front)
+        val location = gl.getUniformLocation(program, "state")
+        gl.uniform1i(location, 0)
         gl.viewport(0, 0, stateSize.x, stateSize.y)
-
-        {
-            val location = gl.getUniformLocation(program, "state")
-            gl.uniform1i(location, 0)
-        }
         renderCommon(gl, program, positionBuffer, uniforms)
     }
 
@@ -108,6 +112,7 @@ object FactoryGl {
         uniforms : List[(String, UniformReference)],
         canvas : HTMLCanvasElement,
     ) : Unit = {
+        gl.bindFramebuffer(GL.FRAMEBUFFER, null) // render to the canvas
         WebGlFunctions.resize(canvas)
         gl.viewport(0, 0, canvas.width, canvas.height)
         renderCommon(gl, program, positionBuffer, uniforms)
@@ -124,6 +129,7 @@ object FactoryGl {
         uniforms.foreach { case (name, u) =>
             val location = gl.getUniformLocation(program, name)
             u match {
+                case u : FactoryGl.UniformInt => gl.uniform1i(location, u.value)
                 case u : FactoryGl.UniformFloat => gl.uniform1f(location, u.value)
                 case u : FactoryGl.UniformVec2 => gl.uniform2f(location, u.x, u.y)
                 case u : FactoryGl.UniformVec3 => gl.uniform3f(location, u.x, u.y, u.z)

@@ -92,9 +92,6 @@ object WebGlFunctions {
     }
 
     def resize(canvas : HTMLCanvasElement) {
-        // Lookup the size the browser is displaying the canvas in CSS pixels
-        // and compute a size needed to make our drawingbuffer match it in
-        // device pixels.
         val realToCSSPixels = dom.window.devicePixelRatio
         val displayWidth = Math.floor(canvas.clientWidth * realToCSSPixels).toInt
         val displayHeight = Math.floor(canvas.clientHeight * realToCSSPixels).toInt
