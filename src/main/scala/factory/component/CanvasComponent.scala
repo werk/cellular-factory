@@ -7,23 +7,25 @@ import factory.IVec2
 import factory.webgl.FactoryGl
 import factory.webgl.FactoryGl.UniformFloat
 
-case class CanvasComponent() extends Component[NoEmit] {
+case class CanvasComponent(stepCodeP : P[String], viewCodeP : P[String]) extends Component[NoEmit] {
 
     override def render(get : Get) : Node = {
+        val stepCode = get(stepCodeP)
+        val viewCode = get(viewCodeP)
         val canvas = E.canvas(
-            S.width.px(500),
-            S.height.px(500),
-        ).withRef(withCanvas)
+            S.width.percent(100),
+            S.height.percent(100),
+        ).withRef(withCanvas(stepCode, viewCode, _))
         canvas
     }
 
-    def withCanvas(e : Any) : Unit = if(e != null) {
+    def withCanvas(stepCode : String, viewCode : String, e : Any) : Unit = if(e != null) {
         val canvas = e.asInstanceOf[dom.html.Canvas]
         val gl = canvas.getContext("webgl").asInstanceOf[GL]
         val timeUniform = new UniformFloat()
         val renderer = new FactoryGl(
             gl = gl,
-            simulateCode = simulationCode,
+            simulateCode = stepCode,
             viewCode = viewCode,
             uniforms = List("t" -> timeUniform),
             materialsImage = null,
@@ -48,9 +50,9 @@ case class CanvasComponent() extends Component[NoEmit] {
             renderer.draw()
             dom.window.requestAnimationFrame(loop)
         }
-        dom.window.requestAnimationFrame(loop);
+        dom.window.requestAnimationFrame(loop)
     }
-
+/*
     val viewCode = """
 precision mediump float;
 uniform sampler2D state;
@@ -82,5 +84,5 @@ void main() {
     gl_FragColor = vec4(sin(t * 13.37) * 0.5 + 0.5, 1, 1, 1);
 }
     """
-
+*/
 }
