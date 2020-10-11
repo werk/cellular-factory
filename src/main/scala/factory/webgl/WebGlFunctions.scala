@@ -64,7 +64,17 @@ object WebGlFunctions {
             case ImageTextureSource(loadedImage) =>
                 gl.texImage2D(TEXTURE_2D, 0, RGBA, RGBA, UNSIGNED_BYTE, loadedImage)
             case DataTextureSource(size) =>
-                gl.texImage2D(TEXTURE_2D, 0, RGBA, size.x, size.y, 0, RGBA, UNSIGNED_BYTE, null);
+                gl.texImage2D(
+                    target = TEXTURE_2D,
+                    level = 0,
+                    internalformat = WebGl2.R32UI,
+                    width = size.x,
+                    height = size.y,
+                    border = 0,
+                    format = WebGl2.RED_INTEGER,
+                    `type` = UNSIGNED_INT,
+                    pixels = null
+                );
         }
 
         gl.texParameteri(TEXTURE_2D, TEXTURE_WRAP_S, CLAMP_TO_EDGE);

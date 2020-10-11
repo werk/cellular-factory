@@ -21,7 +21,7 @@ case class CanvasComponent(stepCodeP : P[String], viewCodeP : P[String]) extends
 
     def withCanvas(stepCode : String, viewCode : String, e : Any) : Unit = if(e != null) {
         val canvas = e.asInstanceOf[dom.html.Canvas]
-        val gl = canvas.getContext("webgl").asInstanceOf[GL]
+        val gl = canvas.getContext("webgl2").asInstanceOf[GL]
         val timeUniform = new UniformFloat()
         val renderer = new FactoryGl(
             gl = gl,

@@ -1,6 +1,9 @@
+#version 300 es
 precision mediump float;
-uniform sampler2D state;
+precision highp int;
 
+out vec4 outputColor;
+uniform highp usampler2D state;
 uniform float t;
 
 void main() {
@@ -13,7 +16,8 @@ void main() {
 
     vec2 stateSize = vec2(100, 100);
 
-    vec4 center = texture2D(state, tile / stateSize);
+    uvec4 centerInt = texture(state, tile / stateSize);
+    float red = float(centerInt.r) / 200.0;
 
-    gl_FragColor = vec4(center.x, sin(t) * 0.5 + 0.5, 1, 1);
+    outputColor = vec4(red, 0/*sin(t) * 0.5 + 0.5*/, 0, 1);
 }
