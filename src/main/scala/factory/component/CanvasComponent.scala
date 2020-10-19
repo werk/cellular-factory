@@ -51,7 +51,7 @@ case class CanvasComponent(
 
     def start(renderer : FactoryGl, timeUniform : UniformFloat, stepUniform : UniformInt) {
         val t0 = System.currentTimeMillis()
-        var step = 0
+        var step = -1
 
         def loop(x : Double) {
             val t = (System.currentTimeMillis() - t0) / 1000f
@@ -68,37 +68,5 @@ case class CanvasComponent(
         }
         dom.window.requestAnimationFrame(loop)
     }
-/*
-    val viewCode = """
-precision mediump float;
-uniform sampler2D state;
 
-uniform float t;
-
-void main() {
-    vec2 offset = vec2(0, 0);
-    vec2 resolution = vec2(500, 500);
-    float zoom = 1.0;
-    float screenToMapRatio = zoom / resolution.x;
-    vec2 xy = gl_FragCoord.xy * screenToMapRatio + offset;
-    vec2 tile = floor(xy + 0.5);
-
-    vec2 stateSize = vec2(100, 100);
-
-    vec4 center = texture2D(state, tile / stateSize);
-
-    gl_FragColor = vec4(center.x, sin(t) * 0.5 + 0.5, 1, 1);
-}
-    """
-
-    val simulationCode = """
-precision mediump float;
-
-uniform float t;
-
-void main() {
-    gl_FragColor = vec4(sin(t * 13.37) * 0.5 + 0.5, 1, 1, 1);
-}
-    """
-*/
 }
