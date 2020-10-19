@@ -1,6 +1,6 @@
 package factory.webgl
 
-import factory.webgl.FactoryGl.UniformReference
+import factory.webgl.FactoryGl.{FragmentShader, UniformReference}
 import org.scalajs.dom
 import dom.raw.{HTMLCanvasElement, HTMLImageElement, WebGLBuffer, WebGLFramebuffer, WebGLProgram, WebGLTexture, WebGLRenderingContext => GL}
 import factory.IVec2
@@ -11,22 +11,21 @@ import scala.scalajs.js
 
 class FactoryGl(
     gl : GL,
-    simulateCode : String,
-    viewCode : String,
-    uniforms : List[(String, UniformReference)],
+    stepShader : FragmentShader,
+    viewShader : FragmentShader,
     materialsImage : HTMLImageElement,
     stateSize : IVec2,
 ) {
 
     private object programs {
-        val simulate = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, simulateCode)
-        val view = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, viewCode)
+        val simulate = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, stepShader.code)
+        val view = WebGlFunctions.initProgram(gl, FactoryGl.vertexCode, viewShader.code)
     }
 
     private object textures {
         var front = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
         var back = WebGlFunctions.bindDataTexture(gl, DataTextureSource(stateSize))
-        //val materials = WebGlFunctions.bindDataTexture(gl, ImageTextureSource(materialsImage))
+        val materials = WebGlFunctions.bindDataTexture(gl, ImageTextureSource(materialsImage))
         //val inventory = WebGlFunctions.bindDataTexture(gl, DataTextureSource(inventorySize))
 
         def swap() = {
@@ -58,7 +57,7 @@ class FactoryGl(
             gl = gl,
             program = programs.simulate,
             positionBuffer = positionBuffer,
-            uniforms = uniforms,
+            uniforms = stepShader.uniforms,
             framebuffer = framebuffer,
             front = textures.front,
             back = textures.back,
@@ -71,7 +70,9 @@ class FactoryGl(
         gl = gl,
         program = programs.view,
         positionBuffer = positionBuffer,
-        uniforms = uniforms,
+        uniforms = viewShader.uniforms,
+        materials = textures.materials,
+        front = textures.front,
         canvas = gl.canvas,
     )
 
@@ -110,10 +111,32 @@ object FactoryGl {
         program : WebGLProgram,
         positionBuffer : WebGLBuffer,
         uniforms : List[(String, UniformReference)],
+        materials : WebGLTexture,
+        front : WebGLTexture,
         canvas : HTMLCanvasElement,
     ) : Unit = {
         gl.bindFramebuffer(GL.FRAMEBUFFER, null) // render to the canvas
         WebGlFunctions.resize(canvas)
+
+        {
+            val location = gl.getUniformLocation(program, "resolution")
+            gl.uniform2f(location, canvas.width, canvas.height)
+        }
+
+        {
+            gl.activeTexture(GL.TEXTURE0 + 0)
+            gl.bindTexture(GL.TEXTURE_2D, front)
+            val location = gl.getUniformLocation(program, "state")
+            gl.uniform1i(location, 0)
+        }
+
+        {
+            gl.activeTexture(GL.TEXTURE0 + 1)
+            gl.bindTexture(GL.TEXTURE_2D, materials)
+            val location = gl.getUniformLocation(program, "materials")
+            gl.uniform1i(location, 1)
+        }
+
         gl.viewport(0, 0, canvas.width, canvas.height)
         renderCommon(gl, program, positionBuffer, uniforms)
     }
@@ -156,6 +179,11 @@ object FactoryGl {
             count = 4
         )
     }
+
+    case class FragmentShader(
+        code : String,
+        uniforms : List[(String, UniformReference)],
+    )
 
     sealed trait UniformReference
 

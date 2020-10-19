@@ -2,8 +2,11 @@ package factory.webgl
 
 import factory.IVec2
 import org.scalajs.dom
+import org.scalajs.dom.Event
 import org.scalajs.dom.raw.WebGLRenderingContext._
 import org.scalajs.dom.raw._
+
+import scala.concurrent.{Future, Promise}
 
 object WebGlFunctions {
 
@@ -56,7 +59,6 @@ object WebGlFunctions {
         gl.bindTexture(TEXTURE_2D, texture)
         gl.uniform1i(uniformLocation, 0)
     }
-
     def bindDataTexture(gl : WebGLRenderingContext, source : TextureSource) : WebGLTexture = {
         val texture = gl.createTexture()
         gl.bindTexture(TEXTURE_2D, texture)
@@ -109,6 +111,20 @@ object WebGlFunctions {
         if (canvas.width != displayWidth || canvas.height != displayHeight) {
             canvas.width = displayWidth
             canvas.height = displayHeight
+        }
+    }
+
+    def loadImage(url : String) : Future[HTMLImageElement] = {
+        val image = dom.document.createElement("img").asInstanceOf[HTMLImageElement]
+        image.src = url
+        if (image.complete) {
+            Future.successful(image)
+        } else {
+            val p = Promise[HTMLImageElement]()
+            image.onload = { _ : Event =>
+                p.success(image)
+            }
+            p.future
         }
     }
 
