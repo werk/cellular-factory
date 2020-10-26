@@ -3,9 +3,9 @@ precision mediump float;
 precision highp int;
 
 uniform highp usampler2D state;
+//uniform float seedling;
 uniform int step;
 out uint outputValue;
-
 
 const uint NOT_FOUND = 4294967295u;
 
@@ -20,17 +20,16 @@ const uint WATER = 5u;
 const uint SAND = 30u;
 const uint LAVA = 65u;
 
-const uint AIR_WEIGHT_SIZE = 10u;
-const uint WATER_WEIGHT_SIZE = 10u;
-const uint SAND_WEIGHT_SIZE = 10u;
-
+const uint AIR_WEIGHT_SIZE = 1u;
 const uint AIR_HEAT_SIZE = 5u;
+const uint WATER_WEIGHT_SIZE = 5u;
 const uint WATER_HEAT_SIZE = 5u;
+const uint SAND_WEIGHT_SIZE = 7u;
 const uint SAND_HEAT_SIZE = 5u;
-
+const uint LAVA_HEAT_SIZE = 5u;
 
 uint encode(Material material) {
-    uint traits = 0u;
+    uint traits;
     switch(material.material) {
         case AIR:
             traits = material.WEIGHT + AIR_WEIGHT_SIZE * (material.HEAT);
@@ -83,9 +82,15 @@ Material decode(uint integer) {
     return material;
 }
 
-Material lookupMaterial(vec2 offset) {
-    uint integer = texture(state, offset/* / scale*/).r;
+Material lookupMaterial(ivec2 offset) {
+    uint integer = texture(state, (vec2(offset) + 0.5) / 100.0/* / scale*/).r;
     return decode(integer);
+}
+
+void swap(inout Material v1, inout Material v2) {
+    Material temp = v1;
+    v1 = v2;
+    v2 = temp;
 }
 
 bool rule_FallDown(inout Material pp_0_0, inout Material pp_0_1) {
@@ -94,6 +99,7 @@ bool rule_FallDown(inout Material pp_0_0, inout Material pp_0_1) {
     if(n == NOT_FOUND) return false;
     if(m == NOT_FOUND) return false;
     if(n <= m) return false;
+    swap(pp_0_0, pp_0_1);
     return true;
 }
 
@@ -104,18 +110,15 @@ bool rule_WaveLeft(inout Material pp_0_0, inout Material pp_1_0) {
 }
 
 void main() {
-
-    vec2 position = gl_FragCoord.xy - 0.5;
-    vec2 offset = mod(float(step), 2.0) == 0.0 ? vec2(-1.0, -1.0) : vec2( 0.0,  0.0);
-    vec2 bottomLeft = floor((position + offset) * 0.5) * 2.0 - offset;
+    ivec2 position = ivec2(gl_FragCoord.xy - 0.5);
+    ivec2 offset = (step % 2 == 0) ? ivec2(1, 1) : ivec2(0, 0);
+    ivec2 bottomLeft = (position + offset) / 2 * 2 - offset;
 
     // Read and parse relevant pixels
-    Material pp_0_0 = lookupMaterial(bottomLeft + vec2(0.0, 0.0));
-    Material pp_0_1 = lookupMaterial(bottomLeft + vec2(0.0, 1.0));
-    Material pp_1_0 = lookupMaterial(bottomLeft + vec2(0.1, 0.0));
-    Material pp_1_1 = lookupMaterial(bottomLeft + vec2(0.1, 1.0));
-    Material pm_0_1 = lookupMaterial(bottomLeft + vec2(0.0, -1.0));
-    Material pm_1_1 = lookupMaterial(bottomLeft + vec2(0.1, -1.0));
+    Material pp_0_0 = lookupMaterial(bottomLeft + ivec2(0, 0));
+    Material pp_0_1 = lookupMaterial(bottomLeft + ivec2(0, 1));
+    Material pp_1_0 = lookupMaterial(bottomLeft + ivec2(1, 0));
+    Material pp_1_1 = lookupMaterial(bottomLeft + ivec2(1, 1));
 
     // Fall
     bool did_Fall = false;
@@ -136,12 +139,15 @@ void main() {
     }
 
     // Write and encode own material
-    vec2 quadrant = position - bottomLeft;
+    ivec2 quadrant = position - bottomLeft;
     Material target = pp_0_0;
-    if(quadrant == vec2(0.0, 0.1)) target = pp_0_1;
-    else if(quadrant == vec2(1.0, 0.0)) target = pp_1_0;
-    else if(quadrant == vec2(1.0, 0.1)) target = pp_1_1;
+    if(quadrant == ivec2(0, 1)) target = pp_0_1;
+    else if(quadrant == ivec2(1, 0)) target = pp_1_0;
+    else if(quadrant == ivec2(1, 1)) target = pp_1_1;
     outputValue = encode(target);
 
-    if(step == 0) outputValue = uint((cos(gl_FragCoord.x * 13.37 + gl_FragCoord.y * 37.13) + 1.0) * 10.0);
+    if(step == 0) {
+        if(int(position.x + position.y) % 4 == 0) outputValue = encode(Material(SAND, 1u, 0u));
+        else outputValue = outputValue = encode(Material(AIR, 0u, 0u));
+    }
 }

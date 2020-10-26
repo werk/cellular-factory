@@ -24,13 +24,13 @@ const uint WATER = 5u;
 const uint SAND = 30u;
 const uint LAVA = 65u;
 
-const uint AIR_WEIGHT_SIZE = 10u;
-const uint WATER_WEIGHT_SIZE = 10u;
-const uint SAND_WEIGHT_SIZE = 10u;
-
+const uint AIR_WEIGHT_SIZE = 1u;
 const uint AIR_HEAT_SIZE = 5u;
+const uint WATER_WEIGHT_SIZE = 5u;
 const uint WATER_HEAT_SIZE = 5u;
+const uint SAND_WEIGHT_SIZE = 7u;
 const uint SAND_HEAT_SIZE = 5u;
+const uint LAVA_HEAT_SIZE = 5u;
 
 
 uint encode(Material material) {
@@ -105,7 +105,7 @@ void main() {
     float screenToMapRatio = zoom / resolution.x;
     vec2 xy = gl_FragCoord.xy * screenToMapRatio + offset;
     vec2 tile = floor(xy + 0.5);
-    vec2 spriteOffset = mod(xy + 0.5, 1.0) * 12.0;
+    vec2 spriteOffset = mod(xy + 0.5, 1.0) * tileSize;
 
     uint integer = texture(state, tile / stateSize).r;
     Material material = decode(integer);
